@@ -22,8 +22,9 @@ DATA_SECTION
   init_int nstocks
   init_vector yrs(1,nyrs)
   init_vector ages(1,nages)
-  init_number tagging_month // ==0 tag jan 1st; used to define fractional natural  mortality in first year of release
-  init_number fish_season_length // used to define the fishing season length in comparison to the tag season (i.e., fraction of year that tags encounter fishing) 
+  init_vector tagging_month(1,nstocks) // ==0 tag jan 1st; used to define fractional natural  mortality in first year of release
+  init_vector fish_start_month(1,nstocks) // used to define the fishing season length in comparison to the tag season (i.e., fraction of year that tags encounter fishing) 
+  init_vector fish_end_month(1,nstocks) // used to define the fishing season length in comparison to the tag season (i.e., fraction of year that tags encounter fishing) 
   init_ivector max_age_recap(1,nyrs)
   init_number phase_T_est_CNST
   init_number phase_T_est
@@ -891,19 +892,34 @@ FUNCTION get_tag_recaptures
 
               if(y==x) //year of release for a cohort, account for time of tagging by discounting mortality 
               {
-               tags_avail(i,x,a,y,j)=ntags(i,x,a)*(1-Hand_Mort(a))*(1-Tag_Loss(a))*T(i,x,a,y,j);  //tags released*tags don't move*tagged fish that don't die due to handling*tag fish that don't lose tags
-               pred_rec(i,x,a,y,j)=report_rate(y,j)*tags_avail(i,x,a,y,j)*(F(j,y,(a+y-x))*(fish_season_length))*(1.-mfexp(-((F(j,y,(a+y-x))*(fish_season_length))+(M(j,y,(a+y-x))*(1-((tagging_month)/(12)))))))/((F(j,y,(a+y-x))*(fish_season_length))+(M(j,y,(a+y-x))*(1-((tagging_month)/(12)))));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)
+               if(fish_start_month(j)>tagging_month(i)) // tags undergo full year of fishing, but need to adjust M for mortality prior beginning of fishing season
+                {
+                 tags_avail(i,x,a,y,j)=ntags(i,x,a)*(1-Hand_Mort(a))*(1-Tag_Loss(a))*T(i,x,a,y,j)*mfexp(-(M(j,y,(a+y-x))*((fish_start_month(j)-tagging_month(i))/12)));  //tags released*tags don't move*tagged fish that don't die due to handling*tag fish that don't lose tags
+                 pred_rec(i,x,a,y,j)=report_rate(y,j)*tags_avail(i,x,a,y,j)*F(j,y,(a+y-x))*(1.-mfexp(-(F(j,y,(a+y-x))+(M(j,y,(a+y-x))*((fish_end_month(j)-fish_start_month(j))/12)))))/(F(j,y,(a+y-x))+(M(j,y,(a+y-x))*((fish_end_month(j)-fish_start_month(j))/12)));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+                }
+               if(fish_start_month(j)<=tagging_month(i)) // tags only undergo partial/full (season<tag/season=tag) fishing, but no need to adjust M because fishing starts immediately at tag event time
+                {                
+                 tags_avail(i,x,a,y,j)=ntags(i,x,a)*(1-Hand_Mort(a))*(1-Tag_Loss(a))*T(i,x,a,y,j);  //tags released*tags don't move*tagged fish that don't die due to handling*tag fish that don't lose tags
+                 pred_rec(i,x,a,y,j)=report_rate(y,j)*tags_avail(i,x,a,y,j)*(F(j,y,(a+y-x))*((1-(tagging_month(i)-fish_start_month(j)))/12))*(1.-mfexp(-((F(j,y,(a+y-x))*((1-(tagging_month(i)-fish_start_month(j)))/12))+(M(j,y,(a+y-x))*((fish_end_month(j)-tagging_month(i))/12)))))/((F(j,y,(a+y-x))*((1-(tagging_month(i)-fish_start_month(j)))/12))+(M(j,y,(a+y-x))*((fish_end_month(j)-tagging_month(i))/12)));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                                  
+                }
                total_recap_temp_stock(y,j)=pred_rec(i,x,a,y,j);
               }
 
-              if(y==(x+1)) //year after tagging must discount tags avail for fraction of year underwent mortality in year of release  // must account for the maximum age so use min function to ensure that not exceeding the max age
-              {
-               tags_avail_temp=0;
-               for(int n=1;n<=nstocks;n++)
-               {               
+            if(y==(x+1)) //year after tagging must discount tags avail for fraction of year underwent mortality in year of release  // must account for the maximum age so use min function to ensure that not exceeding the max age
+             {
+              tags_avail_temp=0;
+              for(int n=1;n<=nstocks;n++)
+              {               
                if(natal_homing==0)
                {
-                tags_avail_temp(n)=tags_avail(i,x,a,y-1,n)*T(n,x,a,y,j)*(1-Tag_Loss(min((a+y-x),nages)))*mfexp(-((F(n,y-1,min(((a+y-x)-1),nages))*(fish_season_length))+(M(n,y-1,min(((a+y-x)-1),nages))*(1-((tagging_month)/(12)))))); //tags_temp holds all tags moving into zone j, min function takes min of true age-1 (because mortality occurs in prev year) and nages allowed (plus group)
+                if(fish_start_month(n)>tagging_month(i)) // tags undergo full year of fishing, but need to adjust M for mortality prior beginning of fishing season
+                 {
+                  tags_avail_temp(n)=tags_avail(i,x,a,y-1,n)*T(n,x,a,y,j)*(1-Tag_Loss(min((a+y-x),nages)))*mfexp(-(M(n,y-1,min(((a+y-x)-1),nages))*(1-(fish_end_month(n)/12))))*mfexp(-(F(n,y-1,min(((a+y-x)-1),nages))+(M(n,y-1,min(((a+y-x)-1),nages))*((fish_end_month(n)-fish_start_month(n))/12)))); //tags_temp holds all tags moving into zone j, min function takes min of true age-1 (because mortality occurs in prev year) and nages allowed (plus group)
+                 }
+                if(fish_start_month(n)<=tagging_month(i)) // tags only undergo partial/full (season<tag/season=tag) fishing, but no need to adjust M because fishing starts immediately at tag event time
+                 {
+                  tags_avail_temp(n)=tags_avail(i,x,a,y-1,n)*T(n,x,a,y,j)*(1-Tag_Loss(min((a+y-x),nages)))*mfexp(-(M(n,y-1,min(((a+y-x)-1),nages))*(1-(fish_end_month(n)/12))))*mfexp(-((F(n,y-1,min(((a+y-x)-1),nages))*((1-(tagging_month(i)-fish_start_month(n)))/12))+(M(n,y-1,min(((a+y-x)-1),nages))*((fish_end_month(n)-tagging_month(i))/12)))); //tags_temp holds all tags moving into zone j, min function takes min of true age-1 (because mortality occurs in prev year) and nages allowed (plus group)
+                 }
                }
                 //#####################################################################################################
                 //  TRUE NATAL HOMING  T(n,x,a,y,j) becomes T(i,x,a,y,j) because need to maintain your natal origin
@@ -911,36 +927,55 @@ FUNCTION get_tag_recaptures
                 //########################################################################################################              
                if(natal_homing==1)
                {
-                tags_avail_temp(n)=tags_avail(i,x,a,y-1,n)*T(i,x,a,y,j)*(1-Tag_Loss(min((a+y-x),nages)))*mfexp(-((F(n,y-1,min(((a+y-x)-1),nages))*(fish_season_length))+(M(n,y-1,min(((a+y-x)-1),nages))*(1-((tagging_month)/(12)))))); //tags_temp holds all tags moving into zone j, min function takes min of true age-1 (because mortality occurs in prev year) and nages allowed (plus group)
+                if(fish_start_month(n)>tagging_month(i)) // tags undergo full year of fishing, but need to adjust M for mortality prior beginning of fishing season
+                 {
+                  tags_avail_temp(n)=tags_avail(i,x,a,y-1,n)*T(i,x,a,y,j)*(1-Tag_Loss(min((a+y-x),nages)))*mfexp(-(M(n,y-1,min(((a+y-x)-1),nages))*(1-(fish_end_month(n)/12))))*mfexp(-(F(n,y-1,min(((a+y-x)-1),nages))+(M(n,y-1,min(((a+y-x)-1),nages))*((fish_end_month(n)-fish_start_month(n))/12)))); //tags_temp holds all tags moving into zone j, min function takes min of true age-1 (because mortality occurs in prev year) and nages allowed (plus group)
+                 }
+                if(fish_start_month(n)<=tagging_month(i)) // tags only undergo partial/full (season<tag/season=tag) fishing, but no need to adjust M because fishing starts immediately at tag event time
+                 {
+                  tags_avail_temp(n)=tags_avail(i,x,a,y-1,n)*T(i,x,a,y,j)*(1-Tag_Loss(min((a+y-x),nages)))*mfexp(-(M(n,y-1,min(((a+y-x)-1),nages))*(1-(fish_end_month(n)/12))))*mfexp(-((F(n,y-1,min(((a+y-x)-1),nages))*((1-(tagging_month(i)-fish_start_month(n)))/12))+(M(n,y-1,min(((a+y-x)-1),nages))*((fish_end_month(n)-tagging_month(i))/12)))); //tags_temp holds all tags moving into zone j, min function takes min of true age-1 (because mortality occurs in prev year) and nages allowed (plus group)
+                 }               
                }               
-               }
-               tags_avail(i,x,a,y,j)=sum(tags_avail_temp);
-               pred_rec(i,x,a,y,j)=report_rate(y,j)*tags_avail(i,x,a,y,j)*Mort_Fish(j,y,min((a+y-x),nages));
-               total_recap_temp_stock(y,j)=pred_rec(i,x,a,y,j);
               }
+               tags_avail(i,x,a,y,j)=sum(tags_avail_temp);
+               
+               if(fish_start_month(j)>0) // tags undergo full year of fishing, but need to adjust M for mortality prior beginning of fishing season
+                {
+                 tags_avail(i,x,a,y,j)=tags_avail(i,x,a,y,j)*mfexp(-(M(j,y,min((a+y-x),nages))*(fish_start_month(j)/12)));  //tags released*tags don't move*tagged fish that don't die due to handling*tag fish that don't lose tags
+                }
+               pred_rec(i,x,a,y,j)=report_rate(y,j)*tags_avail(i,x,a,y,j)*F(j,y,min((a+y-x),nages))*(1.-mfexp(-(F(j,y,min((a+y-x),nages))+(M(j,y,min((a+y-x),nages))*((fish_end_month(j)-fish_start_month(j))/12)))))/(F(j,y,min((a+y-x),nages))+(M(j,y,min((a+y-x),nages))*((fish_end_month(j)-fish_start_month(j))/12)));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+               total_recap_temp_stock(y,j)=pred_rec(i,x,a,y,j);
+             }
 
               if(y>x+1) //all other years assume full mortality  // must account for the maximum age so use min function to ensure that not exceeding the max age
               {
                tags_avail_temp=0;
-               for(int n=1;n<=nstocks;n++)
-               {               
-               if(natal_homing==0)
-               {
-                tags_avail_temp(n)=tags_avail(i,x,a,y-1,n)*T(n,x,a,y,j)*(1-Tag_Loss(min((a+y-x),nages)))*Total_Survival(n,y-1,min(((a+y-x)-1),nages)); //tags_temp holds all tags moving into zone j, min function takes min of true age-1 (because mortality occurs in prev year) and nages allowed (plus group)
-               }
+                for(int n=1;n<=nstocks;n++)
+                {               
+                 if(natal_homing==0)
+                 {
+                  tags_avail_temp(n)=tags_avail(i,x,a,y-1,n)*T(n,x,a,y,j)*(1-Tag_Loss(min((a+y-x),nages)))*mfexp(-(M(n,y-1,min(((a+y-x)-1),nages))*(1-(fish_end_month(n)/12))))*mfexp(-(F(n,y-1,min(((a+y-x)-1),nages))+(M(n,y-1,min(((a+y-x)-1),nages))*((fish_end_month(n)-fish_start_month(n))/12)))); //tags_temp holds all tags moving into zone j, min function takes min of true age-1 (because mortality occurs in prev year) and nages allowed (plus group)
+                 }
                 //#####################################################################################################
                 //  TRUE NATAL HOMING  T(n,x,a,y,j) becomes T(i,x,a,y,j) because need to maintain your natal origin
                 //  movement values so T doesn't depend on current stock only origin stock and destination stock
                 //########################################################################################################              
-               if(natal_homing==1)
-               {
-                tags_avail_temp(n)=tags_avail(i,x,a,y-1,n)*T(i,x,a,y,j)*(1-Tag_Loss(min((a+y-x),nages)))*Total_Survival(n,y-1,min(((a+y-x)-1),nages)); //tags_temp holds all tags moving into zone j, min function takes min of true age-1 (because mortality occurs in prev year) and nages allowed (plus group)
-               }               
+                 if(natal_homing==1)
+                 {
+                  tags_avail_temp(n)=tags_avail(i,x,a,y-1,n)*T(i,x,a,y,j)*(1-Tag_Loss(min((a+y-x),nages)))*mfexp(-(M(n,y-1,min(((a+y-x)-1),nages))*(1-(fish_end_month(n)/12))))*mfexp(-(F(n,y-1,min(((a+y-x)-1),nages))+(M(n,y-1,min(((a+y-x)-1),nages))*((fish_end_month(n)-fish_start_month(n))/12)))); //tags_temp holds all tags moving into zone j, min function takes min of true age-1 (because mortality occurs in prev year) and nages allowed (plus group)             
+                 }               
+                }
+
+                 tags_avail(i,x,a,y,j)=sum(tags_avail_temp);
+               
+                if(fish_start_month(j)>0) // tags undergo full year of fishing, but need to adjust M for mortality prior beginning of fishing season
+                  {
+                   tags_avail(i,x,a,y,j)=tags_avail(i,x,a,y,j)*mfexp(-(M(j,y,min((a+y-x),nages))*(fish_start_month(j)/12)));  //tags released*tags don't move*tagged fish that don't die due to handling*tag fish that don't lose tags
+                  }
+                 pred_rec(i,x,a,y,j)=report_rate(y,j)*tags_avail(i,x,a,y,j)*F(j,y,min((a+y-x),nages))*(1.-mfexp(-(F(j,y,min((a+y-x),nages))+(M(j,y,min((a+y-x),nages))*((fish_end_month(j)-fish_start_month(j))/12)))))/(F(j,y,min((a+y-x),nages))+(M(j,y,min((a+y-x),nages))*((fish_end_month(j)-fish_start_month(j))/12)));  //recaps=tags available*fraction of fish that die*fraction of mortality due to fishing*tags inspected (reporting)                 
+                 total_recap_temp_stock(y,j)=pred_rec(i,x,a,y,j);
                }
-               tags_avail(i,x,a,y,j)=sum(tags_avail_temp);
-               pred_rec(i,x,a,y,j)=report_rate(y,j)*tags_avail(i,x,a,y,j)*Mort_Fish(j,y,min((a+y-x),nages));
-               total_recap_temp_stock(y,j)=pred_rec(i,x,a,y,j);
-              }
+             
              if(y<x) //can't have recaps before fish are released
               {
                tags_avail(i,x,a,y,j)=0;  //tags released*tags don't move*tagged fish that don't die due to handling*tag fish that don't lose tags
