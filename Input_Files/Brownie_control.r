@@ -28,19 +28,30 @@
 #######################################################################################################################################################################################################################################################################################################################################################################
 
 ############## Define Assumed Tag Timing #####################################################################################################
-tagging_month = (0)
-#assumed month that tagging takes place on average
+tagging_month = c(0,0,0,0,0)
+#assumed month that tagging takes place on average for each region
 #defines fraction of year that natural mortality occurs in year of release, must be 0-12
 #==(0) assume tagging occurs on Jan 1st (i.e., full year of mortality in release year)
 #==1-11 mortality is discoundted by (1-tagging_month/12)
 #==(12) no mortality in year of release
 
-fish_season_length = (1)
-#assumed length of fishing season in relation to tag timing
-#defines fraction of year that tags undergo fishing
-#==(0) assume no fishing in the first year (i.e., fishing before tagging)
-#==(0-1) assume fishing season overlaps with tag release time for some partial period of the year
-#==(1) assume full fishing season in first year (i.e., fishing occurs after tagging)
+fish_start_month = c(0,0,0,0,0)
+#assumed start of fishing season for each region
+########################################################
+#CANNOT BE GREATER THAN fish_end_month #################
+########################################################
+#==(0) assume fishing starts Jan 1
+#==(1-11) assume fishing season starts at some point within the year 
+#==(12) assume pulse fishery on Dec 31st
+
+fish_end_month = c(12,12,12,12,12)
+#assumed start of fishing season for each region
+########################################################
+#CANNOT BE LESS THAN fish_end_month #################
+########################################################
+#==(0) assume pulse fishery Jan 1st
+#==(1-11) assume fishing season ends at some point within the year 
+#==(12) assume fishing ends on Dec 31st
 #######################################################################################################################################################################################################################################################################################################################################################################
 
 ######### Define How Movement WIll be Estimated ############################################################################################################################################
