@@ -28,28 +28,28 @@
 #######################################################################################################################################################################################################################################################################################################################################################################
 
 ############## Define Assumed Tag Timing #####################################################################################################
-tagging_month = c(0,0,0,0,0)
+tagging_month = c(1,1,1,1)
 #assumed month that tagging takes place on average for each region
-#defines fraction of year that natural mortality occurs in year of release, must be 0-12
-#==(0) assume tagging occurs on Jan 1st (i.e., full year of mortality in release year)
+#defines fraction of year that natural mortality occurs in year of release, must be 1-12
+#==(1) assume tagging occurs on Jan 1st (i.e., full year of mortality in release year)
 #==1-11 mortality is discoundted by (1-tagging_month/12)
-#==(12) no mortality in year of release
+#==(12) tagging on Dec. 1st
 
-fish_start_month = c(0,0,0,0,0)
+fish_start_month = c(1,1,1,1)
 #assumed start of fishing season for each region
 ########################################################
 #CANNOT BE GREATER THAN fish_end_month #################
 ########################################################
-#==(0) assume fishing starts Jan 1
+#==(1) assume fishing starts Jan 1
 #==(1-11) assume fishing season starts at some point within the year 
-#==(12) assume pulse fishery on Dec 31st
+#==(12) assume fishing starts on Dec 1st
 
-fish_end_month = c(12,12,12,12,12)
-#assumed start of fishing season for each region
+fish_end_month = c(12,12,12,12)
+#assumed end of fishing season for each region
 ########################################################
-#CANNOT BE LESS THAN fish_end_month #################
+#CANNOT BE LESS THAN fish_start_month #################
 ########################################################
-#==(0) assume pulse fishery Jan 1st
+#==(1) assume fishery ends on Jan 31st
 #==(1-11) assume fishing season ends at some point within the year 
 #==(12) assume fishing ends on Dec 31st
 #######################################################################################################################################################################################################################################################################################################################################################################
@@ -108,7 +108,7 @@ initial_F = (-2)			                      # starting F estimate in log space
 ####################################################################################################################################################################################
 
 ########## Define Fishing Mortality Prior/Penalty #########################################################################################################################
-F_pen_switch<- (1)                          # ==0 no prior, ==1 normal prior (use F_sigma, F_ave), ==2 penalty (use F_pen_hi)
+F_pen_switch<- (2)                          # ==0 no prior, ==1 normal prior (use F_sigma, F_ave), ==2 penalty (use F_pen_hi)
 F_sigma = (0.5)                             # standard deviation defining the normal prior
 F_ave = (0.5)                               # average value for the normal prior
 F_pen_hi = (1.5)                              # value above which F penalty activated (typically a large number representing unreasonable mortality rates, e.g., > 3.0)
@@ -127,20 +127,20 @@ report_rate_switch = (1)
 ######### Reporting Rate Specifics ##################################################################################################################################
 phase_report_rate = (3)                    # If report_rate_switch is negative, this must be negative as well; report_rate_switch=(-2) will use Fixed_report_rate below
 initial_report_rate = (-2)                  # starting report_rate estimate in log space
-report_rate_fixed = c(.25,.25,.25,.25,.25)	# if report_rate_switch=(-2) use these values for regional reporting (must be length of nstocks and values are input in numerical order by stock number)
+report_rate_fixed = c(.75, .75, .75, .75)	# if report_rate_switch=(-2) use these values for regional reporting (must be length of nstocks and values are input in numerical order by stock number)
 ################################################################################################################################################################################################################
 
 ####### Define Reporting Rate Prior/Penalty ##############################################################################################################################################################################
 report_rate_pen_switch = (0)	              # ==0 no prior, ==1 normal prior (use Report_rate_sigma, report_rate_ave), ==2 penalty (use report_rate_pen_low, report_rate_pen_hi)
-report_rate_sigma = (0.4)                   # standard deviation defining the normal prior
-report_rate_ave = (0.55)                     # average value for the normal prior
-report_rate_pen_hi = (0.2)                  # value below which report rate penalty activated (see notes above)
-report_rate_pen_low = (0.99999999)          # value above which report rate penalty activated (typically a number very close to 1.0; see notes above)
+report_rate_sigma = (0.1)                   # standard deviation defining the normal prior
+report_rate_ave = (0.5)                     # average value for the normal prior
+report_rate_pen_hi = (0.75)                  # value below which report rate penalty activated (see notes above)
+report_rate_pen_low = (0.25)          # value above which report rate penalty activated (typically a number very close to 1.0; see notes above)
 report_rate_pen_mult = (10)                  # multiplier for reporting rate penalty function (to increase the penalty associated with exceeding the bounds)
 #####################################################################################################################################################################
 
 ############# Define How Natural Mortality Will Be Estimated ##########################################################################################################################################################################
-M_switch = (2)	
+M_switch = (-1)	
 #==(-3) fix at region, cohort, and age-specific Fixed_M_region (i.e., fix at assumed M that varies by region, year, and age), requires that a Fixed_M_region.csv file is in WD (dimensions of (nstocks*ncohorts) X nages)
 #==(-2) fix at year and region-invariant Fixed_M (i.e., fix at assumed M)
 #==(-1) fix at SIM_M (i.e., fix at true M)
@@ -153,18 +153,18 @@ M_switch = (2)
 ########### Natural Mortality Specifics ######################################################################################################################################################################
 #If movement_switch is negative all following phases should be negative as well; M_switch=(-2) will use Fixed_M below; M_switch=(-3) requires Fixed_M_region.csv in WD
 phase_M_CNST = (-4)
-phase_M_age = (4)
+phase_M_age = (-4)
 phase_M_region = (-4)
 phase_M_year = (-4)
 initial_M = (-2)			                     # starting M estimate in log space
-Fixed_M = c(0.365,0.306,0.274,0.255,0.243)  # if M_switch=(-2) use these values for age-specific M (constant by region; must be length of nages and values are input in numerical order by age)
+Fixed_M = c(.23, .23, .23, .23)  # if M_switch=(-2) use these values for age-specific M (constant by region; must be length of nages and values are input in numerical order by age)
 #############################################################################################################################################################################################################
 
 ######## Natural Mortality Prior/Penalty ##################################################################################################################################################################################
-M_pen_switch = (2)		                     # ==0 no prior, ==1 normal prior (use M_sigma, M_ave), ==2 penalty (use M_pen_low, M_pen_hi)
+M_pen_switch = (0)		                     # ==0 no prior, ==1 normal prior (use M_sigma, M_ave), ==2 penalty (use M_pen_low, M_pen_hi)
 M_sigma = (0.5)                            # standard deviation defining the normal prior
 M_ave = (0.6)                              # average value for the normal prior
-M_pen_low = (0.1)                          # value below which M penalty activated (see notes above)
+M_pen_low = (0.01)                          # value below which M penalty activated (see notes above)
 M_pen_high = (1.5)                         # value above which M penalty activated (typically a large number representing unreasonable mortality rates, e.g., > 3.0)
 M_pen_mult = (10)			                   # multiplier for M penalty function (to increase the penalty associated with exceeding the bounds)
 ##################################################################################################################################################################################################################
