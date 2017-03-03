@@ -34,7 +34,6 @@ run.estimation<-function(ntrial,WD,estimation_model_switch1,...)
   invisible(file.copy(from=paste0(WD,"/Simulation Results/Run",ntrial,"/Brownie",ntrial,".rep",sep=""),to=paste0(WD,"/Figures/Report Files/Brownie",ntrial,".rep",sep="")))
   invisible(file.copy(from=paste0(WD,"/Simulation Results/Run",ntrial,"/Brownie",ntrial,".cor",sep=""),to=paste0(WD,"/Figures/Report Files/Brownie",ntrial,".cor",sep="")))
   
-   invisible(shell("del Brownie.exe")) 
    invisible(shell("del admodel.cov"))
    invisible(shell("del admodel.dep"))
    invisible(shell("del admodel.hes")) 
