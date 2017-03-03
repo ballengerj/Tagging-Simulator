@@ -130,8 +130,8 @@ fate=function(mark_region,cohort)
 	chronic1=rbinom(1,1,1-exp(-tag_loss2*(time2+time3/2)))
 	chronic2=ifelse(doubletag1==0,1,rbinom(1,1,1-exp(-tag_loss2*(time2+time3/2))))
 	chronic3=ifelse(chronic1==1,1,rbinom(1,1,1-exp(-tag_loss2*(time3/2+time4))))
-	chronic4=ifelse(chronic2==1,1,
-		ifelse(doubletag1==0,1,rbinom(1,1,1-exp(-tag_loss2*(time3/2+time4)))))
+	chronic4=ifelse(doubletag1==0,1,
+		ifelse(chronic2==1,1,rbinom(1,1,1-exp(-tag_loss2*(time3/2+time4)))))
 	lambda1=ifelse(doubletag1==0,(1-handle1)*(1-loss1)*(1-chronic1),(1-handle1)*(1-loss1*loss2)*(1-chronic1*chronic2))
 	lambda2=ifelse(lambda1==0,0,
 		ifelse(doubletag1==0,1-chronic3,1-chronic3*chronic4))
@@ -154,7 +154,7 @@ fate=function(mark_region,cohort)
 		}
 	report1=ifelse(lambda1==0,0,ifelse(capture1==0,0,rbinom(1,1,reporting[mark_region])))
 	cap_hist[1,]=c(age1,cohort,time1,trunc(age1),mark_region,region1,handle1,doubletag1,(1-loss1)*(1-chronic1),(1-loss2)*(1-chronic2),lambda1,survive1*survive2*survive3,capture1,report1,(1-loss1)*(1-chronic1)*(1-chronic3),(1-loss2)*(1-chronic2)*(1-chronic4),lambda1*lambda2)	
-	cap_hist[,1]=max(1,trunc(age1,2))
+	cap_hist[,1]=max(1,trunc(age1))
 	cap_hist[,2]=cohort
 	cap_hist[,3]=round(time1+(0:(timesteps-1))*tstep/365,2)
 	cap_hist[,5]=mark_region
